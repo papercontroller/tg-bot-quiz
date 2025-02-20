@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"log"
 	"log/slog"
 	"os"
@@ -9,6 +10,31 @@ import (
 	"github.com/joho/godotenv"
 	"gopkg.in/telebot.v4"
 )
+
+var (
+	current int
+	score   int
+)
+
+var questions = []string{
+	"Question 1",
+	"Question 2",
+	"Question 3",
+	"Question 4",
+	"Question 5",
+	"Question 6",
+	"Question 7",
+	"Question 8",
+	"Question 9",
+	"Question 10",
+}
+
+var options = []string{
+	"1",
+	"2",
+	"3",
+	"4",
+}
 
 func main() {
 	err := godotenv.Load()
@@ -31,18 +57,8 @@ func main() {
 	menu := &telebot.ReplyMarkup{ResizeKeyboard: true}
 	btnStart := menu.Text("Go quiz")
 
-	options := &telebot.ReplyMarkup{ResizeKeyboard: true}
-	btnFirst := options.Text("1")
-	btnSecond := options.Text("2")
-	btnThird := options.Text("3")
-	btnFourth := options.Text("4")
-
 	menu.Reply(
 		menu.Row(btnStart),
-	)
-
-	options.Reply(
-		menu.Row(btnFirst, btnSecond, btnThird, btnFourth),
 	)
 
 	b.Handle("/start", func(c telebot.Context) error {
@@ -51,12 +67,38 @@ func main() {
 	})
 
 	b.Handle(&btnStart, func(c telebot.Context) error {
-		c.Send("Lets GO")
+		c.Send("Lets Go!")
+		sendQuestion(b, int(c.Chat().ID))
+		return nil
 
-		question := "first question"
+	})
 
-		return c.Send(question, options)
+	b.Handle(telebot.OnText, func(c telebot.Context) error {
+		score++
+		current++
+		sendQuestion(b, int(c.Chat().ID))
+		return nil
 	})
 
 	b.Start()
+}
+
+func sendQuestion(bot *telebot.Bot, chatID int) {
+	if current >= len(questions) {
+		bot.Send(&telebot.Chat{ID: int64(chatID)}, fmt.Sprintf("Your score is :%d", score))
+		return
+	}
+
+	var buttons []telebot.ReplyButton
+	for _, option := range options {
+		buttons = append(buttons, telebot.ReplyButton{Text: fmt.Sprintf("%v", option)})
+	}
+	keyboard := &telebot.ReplyMarkup{
+		ReplyKeyboard:  [][]telebot.ReplyButton{buttons},
+		ResizeKeyboard: true,
+	}
+
+	question := questions[current]
+	bot.Send(&telebot.Chat{ID: int64(chatID)}, question, &telebot.SendOptions{ReplyMarkup: keyboard})
+
 }
